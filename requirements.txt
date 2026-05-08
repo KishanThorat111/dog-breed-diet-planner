@@ -11,12 +11,13 @@ python-dotenv==1.0.1
 # Auth
 Werkzeug==3.0.3
 
-# ML — TensorFlow (CPU; swap for tensorflow-gpu for GPU instances)
-# Note: ONNX Runtime is preferred for production inference (faster, lighter).
-# Keep tensorflow for fallback EfficientNetB3 and for running train_breed_classifier.py.
-tensorflow==2.16.1
+# ML — TensorFlow removed (requires 1.5 GB RAM; incompatible with free hosting tiers).
+# Use the ONNX Runtime path (train once with scripts/train_breed_classifier.py)
+# or the HuggingFace Inference API fallback (set HUGGINGFACE_API_KEY env var).
+# To restore TF locally: pip install tensorflow==2.16.1
 numpy==1.26.4
 Pillow==10.3.0
+requests==2.32.3   # HuggingFace Inference API calls
 
 # ONNX Runtime (production inference engine)
 onnxruntime==1.18.0

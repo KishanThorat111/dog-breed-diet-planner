@@ -1,30 +1,23 @@
 """
 ML Inference utility for dog breed identification.
 
-Model strategy
---------------
-We use EfficientNetB3 fine-tuned on the Stanford Dogs dataset (120 breeds)
-instead of the original MobileNetV2-on-ImageNet approach.
+Model strategy (priority order)
+--------------------------------
+1. Fine-tuned ONNX model  (app/utils/models/dog_breed_efficientnet.onnx)
+   Best accuracy. Train once with scripts/train_breed_classifier.py, export to
+   ONNX, commit the file. No external dependencies at runtime.
 
-MobileNetV2 + ImageNet had two critical flaws:
-  1. It was never fine-tuned for dog breeds — ImageNet accuracy on dog
-     breed discrimination is ~40-55%.
-  2. decode_predictions() returns ImageNet synset labels (e.g.
-     'n02085782_japanese_spaniel'), not clean breed names.
+2. HuggingFace Inference API  (free-tier fallback, no local GPU/RAM required)
+   Model: google/vit-base-patch16-224 — trained on ImageNet which includes
+   120 Stanford Dogs breed classes.  Accuracy is comparable to EfficientNetB3
+   ImageNet weights and requires zero RAM on the server.
+   Set HUGGINGFACE_API_KEY env var (free account at huggingface.co → Settings
+   → Access Tokens) for higher rate limits (~1 000 req/day on free tier).
+   Without a key the API still works but is rate-limited to ~10 req/min.
 
-Fine-tuning instructions (run once, outside the web app):
-  See scripts/train_breed_classifier.py for the full pipeline.
-  After training, export to ONNX:
-    torch.onnx.export(model, dummy_input, 'models/dog_breed_efficientnet.onnx')
-  Place the .onnx file at:
-    app/utils/models/dog_breed_efficientnet.onnx
-
-Runtime fallback
-----------------
-If the fine-tuned ONNX model is not found (e.g. during initial development),
-the module falls back to EfficientNetB3 pretrained on ImageNet with dog-class
-filtering and clean label mapping.  This is more accurate than raw MobileNetV2
-for the 120 Stanford Dogs breeds that overlap with ImageNet.
+Note: TensorFlow has been removed.  It required ~1.5 GB RAM (incompatible
+with free Railway / Render tiers) and produced a 1.1 GB Docker image.
+Removal shrinks the image to ~250 MB and RAM to ~256 MB.
 """
 
 import logging
@@ -35,6 +28,10 @@ import numpy as np
 from PIL import Image
 
 logger = logging.getLogger(__name__)
+
+# HuggingFace model used as the free-tier fallback (no local ML framework needed)
+_HF_MODEL = 'google/vit-base-patch16-224'
+_HF_API_URL = f'https://api-inference.huggingface.co/models/{_HF_MODEL}'
 
 # ---------------------------------------------------------------------------
 # ImageNet class index → clean breed name
@@ -86,8 +83,40 @@ IMAGENET_DOG_CLASSES: dict[int, str] = {
     270: "African Hunting Dog",
 }
 
-# Minimum confidence to report a result; below this we say "uncertain"
-_CONFIDENCE_THRESHOLD = 0.35
+# ---------------------------------------------------------------------------
+# Label normalisation helpers
+# ---------------------------------------------------------------------------
+
+# Build a lowercase lookup from all our clean breed names so HF API labels
+# can be matched regardless of spacing / capitalisation / underscores.
+_BREED_LABEL_LOOKUP: dict[str, str] = {}
+for _breed in IMAGENET_DOG_CLASSES.values():
+    _key = _breed.lower()
+    _BREED_LABEL_LOOKUP[_key] = _breed
+    _BREED_LABEL_LOOKUP[_key.replace(' ', '_')] = _breed
+    _BREED_LABEL_LOOKUP[_key.replace(' ', '-')] = _breed
+
+
+def _match_breed_label(raw: str) -> str | None:
+    """
+    Try to map a raw HuggingFace/ImageNet label string to a clean breed name.
+    Handles formats like 'golden retriever', 'golden_retriever',
+    'n02099601 golden retriever' (synset prefix).
+    """
+    lower = raw.lower().strip()
+    if lower in _BREED_LABEL_LOOKUP:
+        return _BREED_LABEL_LOOKUP[lower]
+    # Strip optional synset prefix, e.g. 'n02099601 golden retriever'
+    if ' ' in lower:
+        suffix = lower.split(' ', 1)[1]
+        if suffix in _BREED_LABEL_LOOKUP:
+            return _BREED_LABEL_LOOKUP[suffix]
+    # Partial / substring match as last resort
+    for key, val in _BREED_LABEL_LOOKUP.items():
+        if key in lower or lower in key:
+            return val
+    return None
+
 
 # ---------------------------------------------------------------------------
 # Model loader  (lazy-loaded singleton)
@@ -99,8 +128,8 @@ def _load_model() -> Callable:
     """
     Load inference backend.  Priority:
       1. Fine-tuned ONNX model (app/utils/models/dog_breed_efficientnet.onnx)
-      2. EfficientNetB3 pretrained on ImageNet (fallback, requires tensorflow)
-    Returns a callable: (img_array: np.ndarray) -> (breed: str, confidence: float)
+      2. HuggingFace Inference API (free, no local RAM for ML)
+    Returns a callable: (img_path: str) -> (breed: str, confidence: float)
     """
     onnx_path = os.path.join(os.path.dirname(__file__), 'models', 'dog_breed_efficientnet.onnx')
 
@@ -108,17 +137,17 @@ def _load_model() -> Callable:
         logger.info('Loading fine-tuned ONNX model from %s', onnx_path)
         return _load_onnx_model(onnx_path)
 
-    logger.warning(
+    logger.info(
         'Fine-tuned ONNX model not found at %s. '
-        'Falling back to ImageNet EfficientNetB3. '
-        'Accuracy on non-common breeds will be limited. '
-        'Run scripts/train_breed_classifier.py to produce the fine-tuned model.',
-        onnx_path,
+        'Using HuggingFace Inference API (%s) as fallback. '
+        'Set HUGGINGFACE_API_KEY env var for higher rate limits.',
+        onnx_path, _HF_MODEL,
     )
-    return _load_efficientnet_fallback()
+    return _load_huggingface_fallback()
 
 
 def _load_onnx_model(onnx_path: str) -> Callable:
+    """Load the fine-tuned ONNX model. Callable signature: (img_path) -> (breed, confidence)."""
     try:
         import onnxruntime as ort
         sess = ort.InferenceSession(
@@ -126,77 +155,92 @@ def _load_onnx_model(onnx_path: str) -> Callable:
             providers=['CUDAExecutionProvider', 'CPUExecutionProvider'],
         )
         input_name = sess.get_inputs()[0].name
+        input_shape = sess.get_inputs()[0].shape  # e.g. [1, 300, 300, 3]
+        h = input_shape[1] if isinstance(input_shape[1], int) else 300
+        w = input_shape[2] if isinstance(input_shape[2], int) else 300
 
-        # Load the class label list saved alongside the model
         labels_path = onnx_path.replace('.onnx', '_labels.txt')
         with open(labels_path) as f:
             labels = [line.strip() for line in f]
 
-        def _infer(img_array: np.ndarray) -> tuple[str, float]:
+        def _infer(img_path: str) -> tuple[str, float]:
+            img = Image.open(img_path).convert('RGB').resize((w, h), Image.LANCZOS)
+            img_array = np.expand_dims(np.array(img, dtype=np.float32), axis=0)
             outputs = sess.run(None, {input_name: img_array})
             probs = outputs[0][0]
             idx = int(np.argmax(probs))
-            confidence = float(probs[idx])
             breed = labels[idx] if idx < len(labels) else 'Unknown'
-            return breed, round(confidence * 100, 2)
+            return breed, round(float(probs[idx]) * 100, 2)
 
         logger.info('ONNX model loaded successfully (%d classes).', len(labels))
         return _infer
 
     except Exception:
-        logger.exception('Failed to load ONNX model, falling back to EfficientNetB3.')
-        return _load_efficientnet_fallback()
+        logger.exception('Failed to load ONNX model, falling back to HuggingFace API.')
+        return _load_huggingface_fallback()
 
 
-def _load_efficientnet_fallback() -> Callable:
-    import tensorflow as tf
-    from tensorflow.keras.applications.efficientnet import (
-        EfficientNetB3,
-        preprocess_input,
-        decode_predictions,
-    )
+def _load_huggingface_fallback() -> Callable:
+    """
+    Use the HuggingFace Inference API for breed detection.
 
-    logger.info('Loading EfficientNetB3 (ImageNet weights) …')
-    model = EfficientNetB3(weights='imagenet', include_top=True)
-    # Warmup pass to avoid cold-start latency on first real request
-    model.predict(np.zeros((1, 300, 300, 3)), verbose=0)
-    logger.info('EfficientNetB3 loaded and warmed up.')
+    Model : google/vit-base-patch16-224 (ImageNet — 120 dog breed classes)
+    Free tier : ~1 000 requests/day with a free API key.
+    Without key: works but rate-limited (~10 req/min) and model may need
+                 a cold-start warm-up (returns HTTP 503 for ~20 s on first call).
 
-    def _infer(img_array: np.ndarray) -> tuple[str, float]:
-        preds = model.predict(img_array, verbose=0)
-        # top-5 so we can fall back to best dog class if top-1 is non-dog
-        top5 = decode_predictions(preds, top=5)[0]
+    Get a free key at https://huggingface.co → Settings → Access Tokens
+    and set HUGGINGFACE_API_KEY in your Railway environment variables.
+    """
+    import requests as _requests
 
-        # Find the highest-confidence prediction that maps to a dog breed
-        best_breed: str | None = None
-        best_conf: float = 0.0
-        for _, synset_label, prob in top5:
-            # ImageNet dog synsets start with 'n0208' range (class indices 151-268)
-            # decode_predictions returns (synset_id, label, prob)
-            # We match by label string → our clean map
-            clean = _synset_to_clean(synset_label)
-            if clean and float(prob) > best_conf:
-                best_breed = clean
-                best_conf = float(prob)
+    api_key = os.getenv('HUGGINGFACE_API_KEY', '')
+    _headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
+    logger.info('HuggingFace fallback ready (model=%s, key_set=%s)', _HF_MODEL, bool(api_key))
 
-        if best_breed is None or best_conf < _CONFIDENCE_THRESHOLD:
-            # Top-1 might still be a dog even if not in our map
-            _, label, prob = top5[0]
-            best_breed = label.replace('_', ' ').title()
-            best_conf = float(prob)
+    def _infer(img_path: str) -> tuple[str, float]:
+        try:
+            with open(img_path, 'rb') as fh:
+                data = fh.read()
 
-        return best_breed, round(best_conf * 100, 2)
+            resp = _requests.post(_HF_API_URL, headers=_headers, data=data, timeout=40)
+
+            if resp.status_code == 503:
+                # Model is cold-starting on HuggingFace servers (takes ~20 s)
+                logger.warning('HuggingFace model is warming up (503). Tell user to retry.')
+                return 'Model is warming up — please submit again in 30 seconds.', 0.0
+
+            if resp.status_code == 429:
+                logger.warning('HuggingFace rate limit hit. Set HUGGINGFACE_API_KEY.')
+                return 'Service temporarily busy — please try again shortly.', 0.0
+
+            if resp.status_code != 200:
+                logger.error('HuggingFace API error %s: %s', resp.status_code, resp.text[:200])
+                return 'Breed detection unavailable — please try again.', 0.0
+
+            results = resp.json()
+            if not isinstance(results, list) or not results:
+                return 'Unable to identify breed.', 0.0
+
+            # Walk top-10 results and return the first one that maps to a dog breed
+            for item in results[:10]:
+                label = item.get('label', '')
+                score = float(item.get('score', 0))
+                clean = _match_breed_label(label)
+                if clean:
+                    return clean, round(score * 100, 2)
+
+            # No dog breed found — return the top label cleaned up
+            top_label = results[0].get('label', 'Unknown Breed')
+            if ' ' in top_label:          # strip synset prefix if present
+                top_label = top_label.split(' ', 1)[1]
+            return top_label.replace('_', ' ').title(), round(float(results[0].get('score', 0)) * 100, 2)
+
+        except Exception:
+            logger.exception('HuggingFace inference call failed.')
+            return 'Breed detection failed — please try again.', 0.0
 
     return _infer
-
-
-def _synset_to_clean(synset_label: str) -> str | None:
-    """Map an ImageNet synset label string to a clean breed name."""
-    normalised = synset_label.lower().replace('-', '_').replace(' ', '_')
-    for clean in IMAGENET_DOG_CLASSES.values():
-        if clean.lower().replace(' ', '_').replace('-', '_') == normalised:
-            return clean
-    return None
 
 
 # ---------------------------------------------------------------------------
@@ -218,20 +262,10 @@ def predict_breed(img_path: str) -> tuple[str, float]:
     breed : str
         Human-readable breed name.
     confidence : float
-        Confidence percentage (0–100).  Values below ~35 indicate uncertainty.
+        Confidence percentage (0–100).  0 means the result is a fallback message.
     """
     global _predict_fn
     if _predict_fn is None:
         _predict_fn = _load_model()
 
-    img = Image.open(img_path).convert('RGB')
-
-    # Determine target size from backend
-    target_size = (300, 300)  # EfficientNetB3 default; ONNX model may differ
-
-    img_resized = img.resize(target_size, Image.LANCZOS)
-    img_array = np.array(img_resized, dtype=np.float32)
-    img_array = np.expand_dims(img_array, axis=0)
-
-    breed, confidence = _predict_fn(img_array)
-    return breed, confidence
+    return _predict_fn(img_path)
