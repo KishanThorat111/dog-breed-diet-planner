@@ -1,0 +1,121 @@
+/* GLOBAL */
+
+body{
+    font-family:'Poppins', sans-serif;
+    background:#f4f6fb;
+    margin:0;
+}
+
+/* NAVBAR */
+
+.navbar{
+    background:#2c3e50;
+    padding:15px 40px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.logo{
+    color:white;
+    font-size:22px;
+    font-weight:600;
+}
+
+.nav-links a{
+    color:white;
+    text-decoration:none;
+    margin-left:20px;
+    font-size:15px;
+}
+
+.nav-links a:hover{
+    text-decoration:underline;
+}
+
+.logout-btn{
+    background:#e74c3c;
+    padding:6px 14px;
+    border-radius:5px;
+}
+
+/* MAIN CONTAINER */
+
+.container{
+    max-width:1000px;
+    margin:40px auto;
+    padding:20px;
+}
+
+/* CARD STYLE */
+
+.card{
+    background:white;
+    padding:30px;
+    border-radius:10px;
+    box-shadow:0 8px 20px rgba(0,0,0,0.1);
+}
+
+/* BUTTON */
+
+button{
+    background:#4a6cf7;
+    color:white;
+    border:none;
+    padding:10px 20px;
+    border-radius:5px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#2f54eb;
+}
+
+/* INPUT */
+
+input{
+    padding:10px;
+    width:100%;
+    margin-top:10px;
+    margin-bottom:20px;
+    border-radius:5px;
+    border:1px solid #ccc;
+}
+
+/* FOOTER */
+
+.footer{
+    text-align:center;
+    padding:15px;
+    background:#2c3e50;
+    color:white;
+    margin-top:40px;
+}
+.youtube-btn{
+    display:inline-block;
+    padding:12px 25px;
+    background:#ff0000;
+    color:white;
+    font-weight:bold;
+    text-decoration:none;
+    border-radius:6px;
+    margin-top:10px;
+}
+
+.youtube-btn:hover{
+    background:#cc0000;
+}
+.buy-btn{
+    display:inline-block;
+    margin-top:10px;
+    padding:10px 18px;
+    background:#ff9900;
+    color:white;
+    text-decoration:none;
+    font-weight:bold;
+    border-radius:5px;
+}
+
+.buy-btn:hover{
+    background:#e68a00;
+}

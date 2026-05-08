@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Prediction Result</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+
+        body{
+            font-family:'Poppins', sans-serif;
+            background:#f4f6fb;
+            margin:0;
+            text-align:center;
+        }
+
+        .result-container{
+            max-width:800px;
+            margin:60px auto;
+        }
+
+        .card{
+            background:white;
+            padding:40px;
+            border-radius:12px;
+            box-shadow:0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        h1{
+            color:#2c3e50;
+            margin-bottom:30px;
+        }
+
+        .dog-img{
+            border-radius:10px;
+            margin-bottom:20px;
+            box-shadow:0 5px 15px rgba(0,0,0,0.15);
+        }
+
+        .breed{
+            font-size:24px;
+            color:#34495e;
+        }
+
+        .confidence{
+            color:#555;
+            margin-bottom:10px;
+        }
+
+        .size{
+            font-weight:500;
+            color:#4a6cf7;
+            margin-bottom:30px;
+        }
+
+        .diet-box{
+            background:#f8f9fc;
+            padding:25px;
+            border-radius:10px;
+            text-align:left;
+        }
+
+        .diet-box h2{
+            text-align:center;
+            margin-bottom:20px;
+            color:#2c3e50;
+        }
+
+        .diet-item{
+            margin:10px 0;
+            font-size:16px;
+        }
+
+        .upload-btn{
+            margin-top:30px;
+            padding:12px 25px;
+            background:#4a6cf7;
+            color:white;
+            border:none;
+            border-radius:6px;
+            text-decoration:none;
+            display:inline-block;
+            font-size:16px;
+        }
+
+        .upload-btn:hover{
+            background:#2f54eb;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="result-container">
+
+<div class="card">
+
+<h1>🐶 Prediction Result</h1>
+
+<img src="/{{ image }}" width="320" class="dog-img">
+
+<h2 class="breed">Breed: {{ breed }}</h2>
+
+<p class="confidence">Confidence: {{ confidence }}%</p>
+
+<p class="size">Size Category: {{ size }}</p>
+<h2>🐕 Training & Exercise Guide</h2>
+
+<a href="{{ youtube_link }}" target="_blank" class="youtube-btn">
+▶ Watch Training Videos on YouTube
+</a>
+
+<div class="diet-box">
+
+<h2>🍖 Recommended Diet Plan</h2>
+
+<p>
+<b>Main Food:</b> {{ diet.food }}
+<a href="{{ amazon_link }}" target="_blank" class="buy-btn">
+🛒 Buy This Food on Amazon
+</a>
+</p>
+<p class="diet-item"><b>Meals Per Day:</b> {{ diet.meals }}</p>
+
+<p class="diet-item"><b>Extras:</b> {{ diet.extras }}</p>
+
+</div>
+
+<a href="/index" class="upload-btn">Upload Another Image</a>
+<a href="{{ url_for('download_report') }}" class="upload-btn">
+📄 Download Report
+</a>
+
+</div>
+
+
+
+</div>
+
+</body>
+</html>

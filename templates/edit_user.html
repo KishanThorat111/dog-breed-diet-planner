@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit User</h2>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }}">{{ message }}</div>
+  {% endfor %}
+{% endwith %}
+
+<form method="POST">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <label>Username</label>
+  <input type="text" name="username" value="{{ user.username }}" required
+         minlength="2" maxlength="50">
+
+  <label>Email</label>
+  <input type="email" name="email" value="{{ user.email }}" required maxlength="255">
+
+  <label>New Password <small>(leave blank to keep current)</small></label>
+  <input type="password" name="password" placeholder="Min. 8 characters" minlength="8">
+
+  <br><br>
+
+  <button type="submit">Update User</button>
+  <a href="{{ url_for('admin.admin_dashboard') }}"><button type="button">Cancel</button></a>
+</form>
+
+{% endblock %}

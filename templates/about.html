@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="about-container">
+
+    <h1 class="about-title">🐶 Dog Identifier & Diet Planner</h1>
+
+    <p class="about-intro">
+        This application uses Artificial Intelligence to identify dog breeds from uploaded images
+        and generate a suitable diet plan based on the breed and size of the dog.
+    </p>
+
+    <div class="about-grid">
+
+        <div class="about-card">
+            <h3>📌 Project Overview</h3>
+            <p>
+                The Dog Identifier and Diet Planner is a smart web application built using
+                Python and Flask. It allows users to upload a dog image and automatically
+                detect the breed using a deep learning model. Based on the breed size,
+                the system recommends a suitable diet plan.
+            </p>
+        </div>
+
+        <div class="about-card">
+            <h3>⚙ Technologies Used</h3>
+            <ul>
+                <li>Python</li>
+                <li>Flask Framework</li>
+                <li>TensorFlow / MobileNetV2</li>
+                <li>HTML, CSS, Bootstrap</li>
+                <li>Excel Data Storage</li>
+            </ul>
+        </div>
+
+        <div class="about-card">
+            <h3>🎯 Key Features</h3>
+            <ul>
+                <li>User Login & Registration</li>
+                <li>Dog Image Upload</li>
+                <li>AI Breed Identification</li>
+                <li>Diet Recommendation</li>
+                <li>Simple Web Interface</li>
+            </ul>
+        </div>
+
+        <div class="about-card">
+            <h3>🐾 Purpose of System</h3>
+            <p>
+                Many dog owners are unaware of the correct nutritional needs of their pets.
+                This system helps identify dog breeds and suggests proper food plans
+                based on the breed category.
+            </p>
+        </div>
+
+    </div>
+
+    <div class="about-btn">
+        <a href="{{ url_for('index') }}">⬅ Back to Dashboard</a>
+    </div>
+
+</div>
+
+{% endblock %}

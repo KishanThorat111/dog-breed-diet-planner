@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="card">
+
+<h2>Welcome, {{ user }} 👋</h2>
+<h3>Upload a Dog Photo to Identify the Breed &amp; Get a Diet Plan</h3>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }}" style="color:red;">
+      {{ message }}
+    </div>
+  {% endfor %}
+{% endwith %}
+
+<form method="POST" enctype="multipart/form-data" id="upload-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="file" name="image" id="image-input" accept="image/jpeg,image/png,image/webp" required>
+  <br><br>
+  <button type="submit" id="submit-btn">🔍 Identify Breed</button>
+</form>
+
+<!-- Async result area -->
+<div id="status-area" style="display:none; margin-top:20px;">
+  <p id="status-msg">⏳ Analysing your dog photo…</p>
+</div>
+
+<div id="result-area" style="display:none; margin-top:20px;"></div>
+
+</div>
+
+{% if job_id %}
+<script>
+(function () {
+  const jobId = {{ job_id | tojson }};
+  const statusArea = document.getElementById('status-area');
+  const statusMsg  = document.getElementById('status-msg');
+  const resultArea = document.getElementById('result-area');
+  statusArea.style.display = 'block';
+  document.getElementById('upload-form').style.display = 'none';
+
+  function poll() {
+    fetch('/prediction_status/' + jobId)
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === 'pending') {
+          setTimeout(poll, 1500);
+        } else if (data.status === 'done') {
+          statusArea.style.display = 'none';
+          const conf = data.confidence;
+          const warn = conf < 50
+            ? '<p style="color:#e67e22;">⚠️ Low confidence — try a clearer photo.</p>'
+            : '';
+          const breedNote = data.diet.breed_note
+            ? `<p style="color:#2980b9;"><b>🔬 Breed Health Note:</b> ${data.diet.breed_note}</p>`
+            : '';
+          const avoidText = data.diet.avoid
+            ? `<p style="color:#c0392b;"><b>⚠️ Foods to Avoid:</b> ${data.diet.avoid}</p>`
+            : '';
+          resultArea.innerHTML = `
+            <div class="card">
+              <h2>🐶 ${data.breed}</h2>
+              ${warn}
+              <p>Confidence: <b>${conf}%</b> &nbsp;|&nbsp; Size: <b>${data.size}</b></p>
+              <img src="/${data.image}" width="300" style="border-radius:10px;" alt="Your dog">
+              <div class="diet-box" style="margin-top:20px;text-align:left;">
+                <h3>🍖 Diet Plan</h3>
+                <p><b>Food:</b> ${data.diet.food}
+                  <a href="${data.amazon_link}" target="_blank" rel="noopener noreferrer">🛒 Buy on Amazon</a>
+                </p>
+                <p><b>Meals:</b> ${data.diet.meals}</p>
+                <p><b>Extras:</b> ${data.diet.extras}</p>
+                ${avoidText}
+                ${breedNote}
+              </div>
+              ${data.ai_advice ? `
+              <div style="margin-top:18px;padding:16px 18px;background:linear-gradient(135deg,#e8f5e9,#e3f2fd);border-radius:12px;text-align:left;border-left:4px solid #4CAF50;">
+                <p style="margin:0 0 6px 0;font-weight:700;color:#2d3748;">
+                  🤖 AI Advisor
+                  <span style="font-size:0.78rem;font-weight:400;color:#718096;margin-left:8px;">
+                    powered by ${data.ai_provider === 'gemini' ? 'Google Gemini' : 'OpenAI'}
+                  </span>
+                </p>
+                <p style="margin:0;color:#2d3748;line-height:1.6;">${data.ai_advice}</p>
+              </div>` : ''}
+              <br>
+              <a href="${data.youtube_link}" target="_blank" rel="noopener noreferrer">▶ Training Videos</a>
+              &nbsp;
+              <a href="/download_report">📄 Download Report</a>
+            </div>
+          `;
+          resultArea.style.display = 'block';
+        } else {
+          statusMsg.textContent = '❌ Prediction failed. Please try again.';
+          document.getElementById('upload-form').style.display = 'block';
+        }
+      })
+      .catch(() => setTimeout(poll, 2000));
+  }
+
+  poll();
+})();
+</script>
+{% endif %}
+
+{% endblock %}

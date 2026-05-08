@@ -1,0 +1,8 @@
+[phases.install]
+cmds = [
+    # Install pip packages with a longer timeout and no cache-dir to save memory
+    "pip install --no-cache-dir -r requirements.txt"
+]
+
+[start]
+cmd = "gunicorn run:app -w 2 -k sync --bind 0.0.0.0:$PORT --timeout 120"

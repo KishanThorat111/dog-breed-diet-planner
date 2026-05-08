@@ -1,0 +1,35 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+.mypy_cache
+.pytest_cache
+.hypothesis
+*.egg-info
+dist/
+build/
+*.sqlite
+*.db
+.env
+static/uploads/*
+!static/uploads/.gitkeep
+# ONNX model (large binary — download/train separately)
+app/utils/models/*.onnx
+app/utils/models/*.h5
+# Temp inference files
+tmp/

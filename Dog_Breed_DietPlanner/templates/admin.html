@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Admin Dashboard</h2>
+
+<h3>Registered Users</h3>
+
+<table border="1" cellpadding="10">
+
+<tr>
+<th>ID</th>
+<th>Username</th>
+<th>Email</th>
+<th>Password</th>
+<th>Action</th>
+</tr>
+
+{% for user in users %}
+
+<tr>
+<td>{{ loop.index }}</td>
+<td>{{ user.username }}</td>
+<td>{{ user.email }}</td>
+<td>{{ user.password }}</td>
+
+<td>
+
+<a href="{{ url_for('edit_user', user_id=user.id) }}">
+<button>Edit</button>
+</a>
+
+<a href="{{ url_for('delete_user', user_id=user.id) }}">
+<button style="background:red;color:white;">Delete</button>
+</a>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

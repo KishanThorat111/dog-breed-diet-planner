@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="services-container">
+
+    <h1 class="services-title">Our Services</h1>
+
+    <p class="services-subtitle">
+        Our AI-powered system helps dog owners identify breeds and provide proper diet recommendations
+        for healthier pets.
+    </p>
+
+    <div class="services-grid">
+
+        <div class="service-card">
+            <div class="service-icon">🐶</div>
+            <h3>Dog Breed Identification</h3>
+            <p>
+                Upload a dog image and our AI model will analyze the image to detect the breed
+                with high accuracy using deep learning.
+            </p>
+        </div>
+
+        <div class="service-card">
+            <div class="service-icon">🥗</div>
+            <h3>Personalized Diet Planning</h3>
+            <p>
+                Based on the detected breed and size category, the system generates a
+                suitable nutritional diet plan for your dog.
+            </p>
+        </div>
+
+        <div class="service-card">
+            <div class="service-icon">📊</div>
+            <h3>Size-Based Nutrition</h3>
+            <p>
+                Diet plans are customized according to dog size categories
+                such as small, medium, and large breeds.
+            </p>
+        </div>
+
+        <div class="service-card">
+            <div class="service-icon">🩺</div>
+            <h3>Health Recommendations</h3>
+            <p>
+                The system also provides general health and feeding recommendations
+                to maintain your dog’s overall wellbeing.
+            </p>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

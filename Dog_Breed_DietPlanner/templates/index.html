@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="card">
+
+<h2>Welcome {{ user }}</h2>
+
+<h3>Upload Dog Image</h3>
+
+<form method="POST" enctype="multipart/form-data">
+
+<input type="file" name="image" required>
+
+<button type="submit">Predict Breed</button>
+
+</form>
+
+</div>
+
+{% endblock %}

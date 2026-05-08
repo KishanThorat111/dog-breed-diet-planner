@@ -1,0 +1,54 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [main]       # auto-deploy on every push to main
+  workflow_dispatch:       # allow manual trigger from GitHub UI
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout code
+      # -----------------------------------------------------------------------
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # 2. Set up Python + cache dependencies (for test step)
+      # -----------------------------------------------------------------------
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt -r requirements.txt
+
+      # -----------------------------------------------------------------------
+      # 3. Run tests — block deploy if any test fails
+      # -----------------------------------------------------------------------
+      - name: Run tests
+        env:
+          # Give tests a valid (but fake) ADMIN_PASSWORD_HASH so Config.validate() passes
+          ADMIN_PASSWORD_HASH: ${{ secrets.TEST_ADMIN_PASSWORD_HASH }}
+          SECRET_KEY: ci-test-secret-key-not-used-in-production
+          WTF_CSRF_ENABLED: 'False'
+        run: pytest tests/ -v --tb=short
+
+      # -----------------------------------------------------------------------
+      # 4. Deploy to Railway
+      #    RAILWAY_TOKEN is a GitHub Actions Secret — set it in:
+      #    GitHub repo → Settings → Secrets and variables → Actions → New secret
+      #    Get your token from: railway.app → Account Settings → Tokens
+      # -----------------------------------------------------------------------
+      - name: Deploy to Railway
+        uses: railwayapp/railway-github-action@v1
+        with:
+          railway-token: ${{ secrets.RAILWAY_TOKEN }}
+          # Uncomment and set your Railway service ID if you have multiple services:
+          # service: ${{ secrets.RAILWAY_SERVICE_ID }}

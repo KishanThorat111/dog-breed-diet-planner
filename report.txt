@@ -1,0 +1,13 @@
+
+Dog Report
+---------------------
+Breed: beagle
+Confidence: 63.279998779296875 %
+
+Size: medium
+
+Food: Balanced dry dog food
+Meals: 2 meals per day
+Extras: Rice, eggs, vegetables
+
+Date: 2026-05-07 11:34:15.186002

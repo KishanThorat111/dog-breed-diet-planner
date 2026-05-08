@@ -1,0 +1,39 @@
+# Core web framework
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+Flask-WTF==1.2.1
+Flask-Limiter==3.8.0
+flask-talisman==1.1.0
+
+# Config / secrets
+python-dotenv==1.0.1
+
+# Auth
+Werkzeug==3.0.3
+
+# ML — TensorFlow (CPU; swap for tensorflow-gpu for GPU instances)
+# Note: ONNX Runtime is preferred for production inference (faster, lighter).
+# Keep tensorflow for fallback EfficientNetB3 and for running train_breed_classifier.py.
+tensorflow==2.16.1
+numpy==1.26.4
+Pillow==10.3.0
+
+# ONNX Runtime (production inference engine)
+onnxruntime==1.18.0
+
+# Redis (optional — only required when REDIS_URL is set)
+redis==5.0.7
+
+# AI Advisor — lazy-imported, only needed when the respective provider is active
+google-generativeai==0.8.3     # Gemini (free tier: gemini-1.5-flash)
+openai==1.30.5                  # OpenAI (gpt-4o-mini)
+
+# Cloud image storage (Cloudinary — replaces local uploads/ in production)
+cloudinary==1.40.0
+
+# WSGI server
+gunicorn==22.0.0
+
+# -------------------------------------------------------------------
+# Dev / test dependencies (install with: pip install -r requirements-dev.txt)
+# -------------------------------------------------------------------

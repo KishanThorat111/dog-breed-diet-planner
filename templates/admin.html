@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Admin Dashboard</h2>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }}">{{ message }}</div>
+  {% endfor %}
+{% endwith %}
+
+<h3>Registered Users ({{ users | length }})</h3>
+
+<table border="1" cellpadding="10">
+
+<tr>
+  <th>#</th>
+  <th>Username</th>
+  <th>Email</th>
+  <th>Joined</th>
+  <th>Active</th>
+  <th>Actions</th>
+</tr>
+
+{% for user in users %}
+<tr>
+  <td>{{ loop.index }}</td>
+  <td>{{ user.username }}</td>
+  <td>{{ user.email }}</td>
+  <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '—' }}</td>
+  <td>{{ 'Yes' if user.is_active else 'No' }}</td>
+  <td>
+    <a href="{{ url_for('admin.edit_user', user_id=user.id) }}">
+      <button>Edit</button>
+    </a>
+    <!-- DELETE uses POST to prevent CSRF-via-link attacks -->
+    <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}"
+          style="display:inline;"
+          onsubmit="return confirm('Permanently delete {{ user.username }}?')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" style="background:red;color:white;">Delete</button>
+    </form>
+  </td>
+</tr>
+{% else %}
+<tr><td colspan="6" style="text-align:center;">No users registered yet.</td></tr>
+{% endfor %}
+
+</table>
+
+<br>
+<a href="{{ url_for('admin.ai_settings') }}"><button style="background:#4a6cf7;color:white;">🤖 AI Settings</button></a>
+&nbsp;
+<a href="{{ url_for('admin.admin_logout') }}"><button>Logout</button></a>
+
+{% endblock %}

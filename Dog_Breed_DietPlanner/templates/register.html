@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Register - Dog Breed Identifier</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+
+body{
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg,#89f7fe,#66a6ff,#c2ffd8,#fbd786);
+    background-size:400% 400%;
+    animation:gradientBG 10s ease infinite;
+}
+
+@keyframes gradientBG{
+0%{background-position:0% 50%;}
+50%{background-position:100% 50%;}
+100%{background-position:0% 50%;}
+}
+
+.register-card{
+    width:430px;
+    padding:35px;
+    border-radius:20px;
+    background: rgba(255,255,255,0.25);
+    backdrop-filter: blur(12px);
+    box-shadow:0 8px 32px rgba(0,0,0,0.2);
+    transition:0.3s;
+}
+
+.register-card:hover{
+    transform:translateY(-5px);
+}
+
+.title{
+    text-align:center;
+    font-weight:600;
+    margin-bottom:25px;
+    color:#333;
+}
+
+.form-control{
+    border-radius:10px;
+    padding:10px;
+}
+
+.form-control:focus{
+    border-color:#4CAF50;
+    box-shadow:0 0 5px rgba(76,175,80,0.5);
+}
+
+.btn-register{
+    background:#4CAF50;
+    border:none;
+    padding:10px;
+    border-radius:10px;
+    font-weight:600;
+    transition:0.3s;
+}
+
+.btn-register:hover{
+    background:#388e3c;
+    transform:scale(1.03);
+}
+
+.login-link{
+    text-align:center;
+    margin-top:15px;
+}
+
+.login-link a{
+    text-decoration:none;
+    color:#388e3c;
+    font-weight:500;
+}
+
+.login-link a:hover{
+    text-decoration:underline;
+}
+
+.error{
+    text-align:center;
+    color:red;
+    margin-bottom:10px;
+    font-weight:500;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="register-card">
+
+<h2 class="title">🐶 Create Account</h2>
+
+{% if message %}
+<p class="error">{{ message }}</p>
+{% endif %}
+
+<form method="POST" action="{{ url_for('register') }}">
+
+<div class="mb-3">
+<input type="text" name="username" class="form-control" placeholder="Enter Username" required>
+</div>
+
+<div class="mb-3">
+<input type="email" name="email" class="form-control" placeholder="Enter Email" required>
+</div>
+
+<div class="mb-3">
+<input type="password" name="password" class="form-control" placeholder="Enter Password" required>
+</div>
+
+<button type="submit" class="btn btn-register w-100">Register</button>
+
+</form>
+
+<div class="login-link">
+<small>Already have an account?</small><br>
+<a href="{{ url_for('login') }}">Login Here</a>
+</div>
+
+</div>
+
+</body>
+</html>
